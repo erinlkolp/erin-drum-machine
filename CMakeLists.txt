@@ -4,6 +4,10 @@ project(Erin808 VERSION 1.0.0)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
+if(APPLE)
+    set(CMAKE_OSX_DEPLOYMENT_TARGET "12.0" CACHE STRING "Minimum macOS version")
+endif()
+
 add_subdirectory(JUCE)
 
 juce_add_binary_data(Erin808Samples
