@@ -73,13 +73,25 @@ target_compile_definitions(Erin808
         JUCE_DISPLAY_SPLASH_SCREEN=0
 )
 
-# Fix trailing commas in JUCE-generated moduleinfo.json (breaks Bitwig scanner)
+# Fix trailing commas in JUCE-generated moduleinfo.json (breaks DAW scanners)
 # then install the VST3 bundle to ~/.vst3/
+set(VST3_BUNDLE "${CMAKE_CURRENT_BINARY_DIR}/Erin808_artefacts/$<CONFIG>/VST3/Erin 808.vst3")
 add_custom_command(TARGET Erin808_VST3 POST_BUILD
     COMMAND python3 "${CMAKE_SOURCE_DIR}/scripts/fix_moduleinfo.py"
-        "${CMAKE_CURRENT_BINARY_DIR}/Erin808_artefacts/$<CONFIG>/VST3/Erin 808.vst3/Contents/Resources/moduleinfo.json"
+        "${VST3_BUNDLE}/Contents/Resources/moduleinfo.json"
     COMMAND ${CMAKE_COMMAND} -E copy_directory
-        "${CMAKE_CURRENT_BINARY_DIR}/Erin808_artefacts/$<CONFIG>/VST3/Erin 808.vst3"
+        "${VST3_BUNDLE}"
         "$ENV{HOME}/.vst3/Erin 808.vst3"
     COMMENT "Fixing moduleinfo.json and installing VST3 to ~/.vst3/"
 )
+
+# Re-sign the VST3 bundle after moduleinfo.json modifications invalidate
+# the ad-hoc signature that JUCE applied earlier in the build.
+# Without this, macOS (especially Apple Silicon) refuses to load the plugin.
+if(APPLE)
+    add_custom_command(TARGET Erin808_VST3 POST_BUILD
+        COMMAND codesign -f -s - "${VST3_BUNDLE}"
+        COMMAND codesign -f -s - "$ENV{HOME}/.vst3/Erin 808.vst3"
+        COMMENT "Re-signing VST3 bundles after moduleinfo fix"
+    )
+endif()
