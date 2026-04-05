@@ -4,6 +4,9 @@ on:
   release:
     types: [published]
 
+permissions:
+  contents: write
+
 jobs:
   build:
     strategy:
@@ -40,7 +43,9 @@ jobs:
             libcurl4-openssl-dev
 
       - name: Configure
-        run: cmake -B build -DCMAKE_BUILD_TYPE=Release
+        run: >
+          cmake -B build -DCMAKE_BUILD_TYPE=Release
+          ${{ runner.os == 'macOS' && '-DCMAKE_OSX_ARCHITECTURES=x86_64;arm64' || '' }}
 
       - name: Build
         run: cmake --build build --config Release --target Erin808_VST3 -j2
