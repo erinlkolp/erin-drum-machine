@@ -1,0 +1,65 @@
+name: Build VST3
+
+on:
+  release:
+    types: [published]
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            name: Linux
+          - os: macos-latest
+            name: macOS
+          - os: windows-latest
+            name: Windows
+
+    runs-on: ${{ matrix.os }}
+    name: Build (${{ matrix.name }})
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Install Linux dependencies
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            libasound2-dev \
+            libx11-dev \
+            libxrandr-dev \
+            libxinerama-dev \
+            libxcursor-dev \
+            libfreetype-dev \
+            libwebkit2gtk-4.1-dev \
+            libcurl4-openssl-dev
+
+      - name: Configure
+        run: cmake -B build -DCMAKE_BUILD_TYPE=Release
+
+      - name: Build
+        run: cmake --build build --config Release --target Erin808_VST3 -j2
+
+      - name: Package VST3 (Unix)
+        if: runner.os != 'Windows'
+        run: |
+          cd build/Erin808_artefacts/Release/VST3
+          tar czf "$GITHUB_WORKSPACE/Erin808-${{ matrix.name }}.tar.gz" "Erin 808.vst3"
+
+      - name: Package VST3 (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          Compress-Archive -Path "build\Erin808_artefacts\Release\VST3\Erin 808.vst3" -DestinationPath "Erin808-Windows.zip"
+
+      - name: Upload to release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            Erin808-*.tar.gz
+            Erin808-*.zip
